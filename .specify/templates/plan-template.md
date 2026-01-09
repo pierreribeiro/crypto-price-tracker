@@ -31,7 +31,15 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Verify compliance with `.specify/memory/constitution.md`:
+
+- [ ] **Security-First**: No hardcoded API keys or secrets in code
+- [ ] **Type Safety**: TypeScript strict mode (frontend), Python type hints (backend)
+- [ ] **API Reliability**: Rate limiting, caching, and retry logic implemented
+- [ ] **Mobile-First Design**: Responsive UI (320px min), WCAG 2.1 AA compliance
+- [ ] **Real-Time Updates**: WebSocket/SSE or polling with status indicators
+- [ ] **Error Resilience**: Graceful degradation, cached data fallback, user-friendly errors
+- [ ] **Clean Architecture**: Proper separation (UI → Services → Data), dependency injection
 
 ## Project Structure
 

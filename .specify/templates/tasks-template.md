@@ -48,9 +48,20 @@ description: "Task list template for feature implementation"
 
 **Purpose**: Project initialization and basic structure
 
+<!--
+  Per Constitution:
+  - Principle I: Setup environment variable configuration
+  - Principle II: Configure type checking (TypeScript strict, mypy)
+  - Security scanning tools in CI/CD pipeline
+-->
+
 - [ ] T001 Create project structure per implementation plan
 - [ ] T002 Initialize [language] project with [framework] dependencies
 - [ ] T003 [P] Configure linting and formatting tools
+- [ ] T004 [P] Setup environment variable management (.env, .env.example)
+- [ ] T005 [P] Configure type checking (tsc --noEmit for TS, mypy for Python)
+- [ ] T006 [P] Setup security scanning (bandit for Python, npm audit for Node.js)
+- [ ] T007 [P] Add pre-commit hooks for secret detection
 
 ---
 
@@ -60,14 +71,24 @@ description: "Task list template for feature implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
+<!--
+  Per Constitution:
+  - Principle III: Implement rate limiting and caching framework
+  - Principle VI: Setup error handling infrastructure
+  - Principle VII: Establish clean architecture layers
+-->
+
 Examples of foundational tasks (adjust based on your project):
 
-- [ ] T004 Setup database schema and migrations framework
-- [ ] T005 [P] Implement authentication/authorization framework
-- [ ] T006 [P] Setup API routing and middleware structure
-- [ ] T007 Create base models/entities that all stories depend on
-- [ ] T008 Configure error handling and logging infrastructure
-- [ ] T009 Setup environment configuration management
+- [ ] T008 Setup database schema and migrations framework
+- [ ] T009 [P] Implement authentication/authorization framework
+- [ ] T010 [P] Setup API routing and middleware structure
+- [ ] T011 Create base models/entities that all stories depend on
+- [ ] T012 Configure error handling and logging infrastructure (Principle VI)
+- [ ] T013 Implement caching layer (Redis or in-memory) (Principle III)
+- [ ] T014 [P] Setup rate limiting middleware for external APIs (Principle III)
+- [ ] T015 [P] Implement retry logic with exponential backoff (Principle III)
+- [ ] T016 Create clean architecture directory structure (Principle VII)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -150,11 +171,20 @@ Examples of foundational tasks (adjust based on your project):
 
 **Purpose**: Improvements that affect multiple user stories
 
+<!--
+  Per Constitution:
+  - Principle IV: Validate mobile responsiveness
+  - Principle II: Final type checking validation
+  - Principle I: Security audit
+-->
+
 - [ ] TXXX [P] Documentation updates in docs/
 - [ ] TXXX Code cleanup and refactoring
 - [ ] TXXX Performance optimization across all stories
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
-- [ ] TXXX Security hardening
+- [ ] TXXX Security hardening and secrets audit (Principle I)
+- [ ] TXXX Mobile responsiveness validation (320px min, WCAG 2.1 AA) (Principle IV)
+- [ ] TXXX Type safety validation (tsc, mypy) (Principle II)
 - [ ] TXXX Run quickstart.md validation
 
 ---

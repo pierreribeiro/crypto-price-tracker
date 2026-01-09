@@ -70,10 +70,18 @@
 <!--
   ACTION REQUIRED: The content in this section represents placeholders.
   Fill them out with the right edge cases.
+
+  Per Constitution Principle VI (Error Resilience), consider:
+  - External API failures and network issues
+  - Invalid or malformed API responses
+  - Rate limiting and quota exhaustion
+  - Cached vs stale data scenarios
 -->
 
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
+- How does the system behave when external services are unavailable?
+- What fallback mechanisms are in place for degraded functionality?
 
 ## Requirements *(mandatory)*
 
@@ -84,8 +92,14 @@
 
 ### Functional Requirements
 
+<!--
+  Per Constitution Principle I (Security-First):
+  - API keys and credentials MUST be environment variables
+  - Never specify hardcoded secrets in requirements
+-->
+
 - **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
-- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]  
+- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]
 - **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
