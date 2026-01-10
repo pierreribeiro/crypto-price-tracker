@@ -1,0 +1,490 @@
+openapi: 3.0.3
+info:
+  title: CryptoTracker Pro API
+  description: |
+    REST API for cryptocurrency price tracking application.
+    Provides endpoints for retrieving cryptocurrency data, top gainers/losers, and search/filter functionality.
+
+    **Architecture**: FastAPI + Python 3.11+
+    **Real-Time**: WebSocket endpoint for live price updates (see websocket-spec.md)
+    **Caching**: 5-minute TTL on all endpoints via Redis
+    **Rate Limiting**: Implemented per Constitution Principle III
+  version: 1.0.0
+  contact:
+    name: CryptoTracker Pro Team
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+  - url: https://api.cryptotracker.example/v1
+    description: Production server
+
+tags:
+  - name: cryptocurrencies
+    description: Cryptocurrency data operations
+  - name: health
+    description: Health check and status endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check endpoint
+      description: Returns API health status and cache connectivity
+      operationId: getHealth
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded]
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: '2026-01-09T12:00:00Z'
+                  cache:
+                    type: object
+                    properties:
+                      connected:
+                        type: boolean
+                        example: true
+                      latency_ms:
+                        type: number
+                        example: 5.2
+                  external_apis:
+                    type: object
+                    properties:
+                      coingecko:
+                        type: string
+                        enum: [available, unavailable]
+                        example: available
+                      coinmarketcap:
+                        type: string
+                        enum: [available, unavailable]
+                        example: available
+
+  /cryptocurrencies:
+    get:
+      tags:
+        - cryptocurrencies
+      summary: Get top 20 cryptocurrencies
+      description: |
+        Returns the top 20 cryptocurrencies ranked by market capitalization.
+        Implements FR-001, FR-002, FR-003, FR-004, FR-005.
+
+        **Caching**: 5-minute TTL (FR-016)
+        **Data Source**: CoinGecko primary, CoinMarketCap fallback (FR-022)
+      operationId: getCryptocurrencies
+      parameters:
+        - name: include_sparkline
+          in: query
+          description: Include 7-day sparkline data (FR-011)
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Successfully retrieved cryptocurrencies
+          headers:
+            X-Cache-Hit:
+              description: Indicates if response was served from cache
+              schema:
+                type: boolean
+            X-Last-Updated:
+              description: ISO 8601 timestamp of last data update (FR-015)
+              schema:
+                type: string
+                format: date-time
+            X-Data-Source:
+              description: Which API provided the data (coingecko or coinmarketcap)
+              schema:
+                type: string
+                enum: [coingecko, coinmarketcap]
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CryptocurrencyListResponse'
+        '500':
+          description: External API failure (both CoinGecko and CoinMarketCap unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service degraded (serving stale cached data)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CryptocurrencyListResponse'
+                  - type: object
+                    properties:
+                      warning:
+                        type: string
+                        example: 'Data may be stale. External APIs unavailable.'
+
+  /cryptocurrencies/gainers:
+    get:
+      tags:
+        - cryptocurrencies
+      summary: Get top 20 gainers
+      description: |
+        Returns the top 20 cryptocurrencies ranked by highest 24h percentage gain.
+        Implements FR-006.
+
+        **Caching**: 5-minute TTL (FR-016)
+      operationId: getTopGainers
+      parameters:
+        - name: include_sparkline
+          in: query
+          description: Include 7-day sparkline data
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Successfully retrieved top gainers
+          headers:
+            X-Cache-Hit:
+              description: Indicates if response was served from cache
+              schema:
+                type: boolean
+            X-Last-Updated:
+              description: ISO 8601 timestamp of last data update (FR-015)
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CryptocurrencyListResponse'
+
+  /cryptocurrencies/losers:
+    get:
+      tags:
+        - cryptocurrencies
+      summary: Get top 20 losers
+      description: |
+        Returns the top 20 cryptocurrencies ranked by lowest 24h percentage change (biggest losses).
+        Implements FR-007.
+
+        **Caching**: 5-minute TTL (FR-016)
+      operationId: getTopLosers
+      parameters:
+        - name: include_sparkline
+          in: query
+          description: Include 7-day sparkline data
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Successfully retrieved top losers
+          headers:
+            X-Cache-Hit:
+              description: Indicates if response was served from cache
+              schema:
+                type: boolean
+            X-Last-Updated:
+              description: ISO 8601 timestamp of last data update (FR-015)
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CryptocurrencyListResponse'
+
+  /cryptocurrencies/search:
+    get:
+      tags:
+        - cryptocurrencies
+      summary: Search cryptocurrencies
+      description: |
+        Search cryptocurrencies by name or symbol with optional filters.
+        Implements FR-008, FR-009, FR-010.
+
+        **Performance**: 95% of searches <1s (SC-004)
+      operationId: searchCryptocurrencies
+      parameters:
+        - name: q
+          in: query
+          description: Search query (matches name or symbol)
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            example: bitcoin
+        - name: min_price
+          in: query
+          description: Minimum price filter in USD (FR-009)
+          required: false
+          schema:
+            type: number
+            format: double
+            minimum: 0
+            example: 100
+        - name: max_price
+          in: query
+          description: Maximum price filter in USD (FR-009)
+          required: false
+          schema:
+            type: number
+            format: double
+            minimum: 0
+            example: 1000
+        - name: market_cap_category
+          in: query
+          description: Market cap category filter (FR-010)
+          required: false
+          schema:
+            type: string
+            enum: [small, mid, large]
+            example: large
+        - name: include_sparkline
+          in: query
+          description: Include 7-day sparkline data
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Successfully retrieved search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CryptocurrencyListResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No results found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'No cryptocurrencies found matching your criteria'
+                  query:
+                    type: string
+                    example: 'zxcvbnm'
+
+  /cryptocurrencies/{id}:
+    get:
+      tags:
+        - cryptocurrencies
+      summary: Get cryptocurrency details
+      description: |
+        Returns detailed information for a specific cryptocurrency.
+        Includes sparkline data by default (FR-011, FR-012).
+      operationId: getCryptocurrencyById
+      parameters:
+        - name: id
+          in: path
+          description: Cryptocurrency ID (e.g., 'bitcoin', 'ethereum')
+          required: true
+          schema:
+            type: string
+            example: bitcoin
+      responses:
+        '200':
+          description: Successfully retrieved cryptocurrency details
+          headers:
+            X-Cache-Hit:
+              description: Indicates if response was served from cache
+              schema:
+                type: boolean
+            X-Last-Updated:
+              description: ISO 8601 timestamp of last data update
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cryptocurrency'
+        '404':
+          description: Cryptocurrency not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    Cryptocurrency:
+      type: object
+      required:
+        - id
+        - symbol
+        - name
+        - currentPrice
+        - marketCap
+        - volume24h
+        - priceChange24h
+        - priceChangePercent24h
+        - rank
+        - lastUpdated
+        - priceDirection
+        - marketCapCategory
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+          example: bitcoin
+        symbol:
+          type: string
+          description: Trading symbol (uppercase)
+          example: BTC
+        name:
+          type: string
+          description: Full cryptocurrency name
+          example: Bitcoin
+        currentPrice:
+          type: number
+          format: double
+          description: Current price in USD (FR-002)
+          example: 42350.25
+        marketCap:
+          type: number
+          format: double
+          description: Market capitalization in USD (FR-005)
+          example: 831245678901.23
+        volume24h:
+          type: number
+          format: double
+          description: 24-hour trading volume in USD (FR-005)
+          example: 28456789012.45
+        priceChange24h:
+          type: number
+          format: double
+          description: Absolute price change in 24h USD (FR-003)
+          example: 523.75
+        priceChangePercent24h:
+          type: number
+          format: double
+          description: Percentage price change in 24h (FR-003)
+          example: 1.25
+        sparklineData:
+          type: array
+          description: 7-day price history for sparkline (FR-011)
+          items:
+            $ref: '#/components/schemas/PriceDataPoint'
+          maxItems: 168
+        rank:
+          type: integer
+          description: Market cap ranking (1-20 for top 20)
+          minimum: 1
+          maximum: 20
+          example: 1
+        lastUpdated:
+          type: string
+          format: date-time
+          description: Timestamp of last data update (FR-015)
+          example: '2026-01-09T12:30:00Z'
+        priceDirection:
+          type: string
+          enum: [up, down]
+          description: Price direction indicator (FR-004)
+          example: up
+        marketCapCategory:
+          type: string
+          enum: [small, mid, large]
+          description: Market cap category (FR-010)
+          example: large
+
+    PriceDataPoint:
+      type: object
+      required:
+        - timestamp
+        - price
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of observation
+          example: '2026-01-09T12:00:00Z'
+        price:
+          type: number
+          format: double
+          description: Price in USD at this timestamp
+          example: 42350.25
+
+    CryptocurrencyListResponse:
+      type: object
+      required:
+        - data
+        - metadata
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cryptocurrency'
+          maxItems: 20
+          description: List of cryptocurrencies (maximum 20)
+        metadata:
+          type: object
+          required:
+            - count
+            - lastUpdated
+            - dataSource
+          properties:
+            count:
+              type: integer
+              description: Number of cryptocurrencies in response
+              minimum: 0
+              maximum: 20
+              example: 20
+            lastUpdated:
+              type: string
+              format: date-time
+              description: Timestamp of last data update (FR-015)
+              example: '2026-01-09T12:30:00Z'
+            dataSource:
+              type: string
+              enum: [coingecko, coinmarketcap, cache]
+              description: Source of data (FR-022)
+              example: coingecko
+            cacheHit:
+              type: boolean
+              description: Whether response was served from cache
+              example: true
+
+    ErrorResponse:
+      type: object
+      required:
+        - message
+        - timestamp
+      properties:
+        message:
+          type: string
+          description: Human-readable error message (FR-019)
+          example: 'External API unavailable. Please try again later.'
+        code:
+          type: string
+          description: Machine-readable error code
+          example: 'EXTERNAL_API_FAILURE'
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when error occurred
+          example: '2026-01-09T12:30:00Z'
+        details:
+          type: object
+          description: Additional error context (optional)
+          additionalProperties: true
