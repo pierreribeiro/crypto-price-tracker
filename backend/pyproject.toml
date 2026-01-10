@@ -1,0 +1,130 @@
+[tool.ruff]
+# Python version target
+target-version = "py311"
+
+# Line length to match Prettier's printWidth
+line-length = 100
+
+# Source code directory
+src = ["src"]
+
+# Enable auto-fixing
+fix = true
+
+[tool.ruff.lint]
+# Enable comprehensive rule sets
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "ANN",    # flake8-annotations
+    "ASYNC",  # flake8-async
+    "B",      # flake8-bugbear
+    "A",      # flake8-builtins
+    "COM",    # flake8-commas
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez
+    "T10",    # flake8-debugger
+    "EM",     # flake8-errmsg
+    "EXE",    # flake8-executable
+    "FA",     # flake8-future-annotations
+    "ISC",    # flake8-implicit-str-concat
+    "ICN",    # flake8-import-conventions
+    "G",      # flake8-logging-format
+    "INP",    # flake8-no-pep420
+    "PIE",    # flake8-pie
+    "T20",    # flake8-print
+    "PYI",    # flake8-pyi
+    "PT",     # flake8-pytest-style
+    "Q",      # flake8-quotes
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "SLF",    # flake8-self
+    "SLOT",   # flake8-slots
+    "SIM",    # flake8-simplify
+    "TID",    # flake8-tidy-imports
+    "TCH",    # flake8-type-checking
+    "INT",    # flake8-gettext
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+    "TD",     # flake8-todos
+    "FIX",    # flake8-fixme
+    "ERA",    # eradicate
+    "PD",     # pandas-vet
+    "PGH",    # pygrep-hooks
+    "PL",     # pylint
+    "TRY",    # tryceratops
+    "FLY",    # flynt
+    "NPY",    # numpy-specific rules
+    "PERF",   # performance anti-patterns
+    "FURB",   # refurb
+    "LOG",    # flake8-logging
+    "RUF",    # Ruff-specific rules
+]
+
+# Ignore specific rules that may conflict with FastAPI patterns
+ignore = [
+    "ANN401",  # Dynamically typed expressions (Any) are disallowed
+    "D",       # pydocstyle (documentation)
+    "TD002",   # Missing author in TODO
+    "TD003",   # Missing issue link in TODO
+    "FIX002",  # Line contains TODO
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Allow unused imports and arguments in __init__.py files
+"__init__.py" = ["F401", "F403"]
+# Allow assert statements in tests
+"tests/**/*.py" = ["S101", "PLR2004"]
+
+[tool.ruff.lint.isort]
+# Group imports according to standard practice
+known-first-party = ["app", "src"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.lint.mccabe]
+# Maximum cyclomatic complexity
+max-complexity = 10
+
+[tool.ruff.format]
+# Use single quotes for strings
+quote-style = "single"
+
+# Unix-style line endings
+line-ending = "lf"
+
+# Indent with spaces
+indent-style = "space"
+
+[tool.pytest.ini_options]
+# Pytest configuration
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+]
+
+[tool.coverage.run]
+# Coverage configuration
+source = ["src"]
+omit = ["*/tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+# Coverage reporting
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
